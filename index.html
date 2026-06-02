@@ -195,6 +195,12 @@
             gap: 25px;
         }
 
+        /* Special override for shop layout tab when active */
+        .game-view.active.flex-layout {
+            display: flex;
+            flex-direction: column;
+        }
+
         @media (max-width: 850px) {
             .game-view.active {
                 grid-template-columns: 1fr;
@@ -936,6 +942,72 @@
             text-transform: capitalize;
             font-weight: bold;
         }
+
+        /* DEVELOPER OVERLAY PANEL STYLES */
+        #dev-console-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(11, 8, 22, 0.95);
+            border: 3px solid #ff0055;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+            border-radius: 14px;
+            padding: 15px;
+            z-index: 9999;
+            display: none;
+            user-select: none;
+        }
+        .dev-header {
+            font-size: 14px;
+            font-weight: 900;
+            color: #ff0055;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 0, 85, 0.3);
+            padding-bottom: 6px;
+            cursor: move;
+        }
+        .dev-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .dev-row label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #ffaa00;
+            text-transform: uppercase;
+        }
+        .dev-input-wrap {
+            display: flex;
+            gap: 6px;
+        }
+        .dev-input {
+            flex-grow: 1;
+            background: #221424;
+            border: 1px solid #ff0055;
+            border-radius: 6px;
+            color: #fff;
+            padding: 6px;
+            font-weight: bold;
+        }
+        .dev-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.03);
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .dev-switch input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -948,8 +1020,6 @@
             <div class="balance-container" id="balance-display">
                 💰 $<span id="user-balance">500.00</span>
             </div>
-            <button class="btn btn-green" onclick="saveGame()">Save</button>
-            <button class="btn" onclick="loadGame()">Load</button>
             <button class="btn btn-pink" onclick="resetGame()">Reset</button>
         </div>
     </header>
@@ -1093,7 +1163,7 @@
                         <div id="upgrade-center-mult">1.50x</div>
                     </div>
                     <div class="upgrader-arrow-wrapper" id="upgrader-arrow-wrapper">
-                        <div class="cs-item upgrader-arrow"></div>
+                        <div class="upgrader-arrow"></div>
                     </div>
                 </div>
             </div>
@@ -1208,7 +1278,7 @@
             </div>
         </div>
 
-        <div id="game-inventory" class="game-view" style="grid-template-columns: 1fr; gap: 25px;">
+        <div id="game-inventory" class="game-view">
             <div class="control-panel" style="width: 100%;">
                 <h3>🎰 Case Unboxing Lineup</h3>
                 <div class="cs-opener-window">
@@ -1241,7 +1311,7 @@
                             <div class="case-pool-list">
                                 🕶️ Black • 🏳️ White<br>👑 Gold • 🔮 Amethyst
                             </div>
-                            <button class="btn btn-green" id="case-buy-2" onclick="buyAndOpenCase(2)">Buy & Open ($100)</button>
+                            <button class="btn btn-green" id="case-buy-2" onclick="buyAndOpenCase(2)">Buy & Open ($2000)</button>
                         </div>
                     </div>
                 </div>
@@ -1273,6 +1343,25 @@
 
     </div>
 
+    <!-- FLOATING DEVELOPER OVERLAY CONSOLE -->
+    <div id="dev-console-panel">
+        <div class="dev-header" id="dev-drag-handle">🛠️ DEV CONTROL INTERRUPT</div>
+        <div class="dev-row">
+            <label>Modify Account Balance</label>
+            <div class="dev-input-wrap">
+                <input type="number" id="dev-money-input" class="dev-input" value="10000">
+                <button class="btn btn-green" style="padding: 4px 10px;" onclick="devSetMoney()">Set</button>
+            </div>
+        </div>
+        <div class="dev-row">
+            <button class="btn" style="border-color: #ffaa00; width: 100%;" onclick="devUnlockEverything()">🔓 Unlock Everything</button>
+        </div>
+        <div class="dev-switch">
+            <span style="font-size: 12px; font-weight: bold; color: #ff0055;">FORCE 100% WINRATE</span>
+            <input type="checkbox" id="dev-winrate-toggle">
+        </div>
+    </div>
+
     <script>
         // --- GLOBAL APP STATE ---
         let state = {
@@ -1288,6 +1377,59 @@
             unlockedThemes: ['default'],
             currentTheme: 'default'
         };
+
+        // --- DEV KEYBOARD INTERCEPT CAPTURE ---
+        let inputPattern = "";
+        window.addEventListener('keyup', (e) => {
+            inputPattern += e.key.toLowerCase();
+            if (inputPattern.endsWith("rwasd-dev")) {
+                let pass = prompt("Enter Developer Authentication Key:");
+                if (pass === "rwasd-dev") {
+                    document.getElementById('dev-console-panel').style.display = 'block';
+                } else {
+                    alert("Access Denied.");
+                }
+                inputPattern = "";
+            }
+            if (inputPattern.length > 30) inputPattern = inputPattern.slice(-15);
+        });
+
+        // Developer Actions
+        function devSetMoney() {
+            let amt = parseFloat(document.getElementById('dev-money-input').value);
+            if (!isNaN(amt)) {
+                state.balance = amt;
+                updateUI();
+            }
+        }
+
+        function devUnlockEverything() {
+            state.unlockedThemes = Object.keys(themeConfigs);
+            for(let k in state.achievements) {
+                state.achievements[k].unlocked = true;
+            }
+            updateUI();
+        }
+
+        // Draggable Dev Console Setup
+        const devPanel = document.getElementById('dev-console-panel');
+        const devHandle = document.getElementById('dev-drag-handle');
+        let isDragging = false, offsetX, offsetY;
+        devHandle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - devPanel.offsetLeft;
+            offsetY = e.clientY - devPanel.offsetTop;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                devPanel.style.left = (e.clientX - offsetX) + 'px';
+                devPanel.style.top = (e.clientY - offsetY) + 'px';
+                devPanel.style.bottom = 'auto';
+                devPanel.style.right = 'auto';
+            }
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+
 
         // --- THEME COLOR CONFIGURATION ENGINE ---
         const themeConfigs = {
@@ -1357,6 +1499,7 @@
             
             renderAchievements();
             renderInventoryUI();
+            saveGame(); // PERSIST STATE AUTOMATICALLY
         }
 
         function renderAchievements() {
@@ -1403,9 +1546,10 @@
 
         function buyAndOpenCase(caseNum) {
             if(isOpeningCase) return;
-            if(state.balance < 100) return alert('Insufficient funds! You need $100.');
+            let caseCost = caseNum === 2 ? 2000 : 100;
+            if(state.balance < caseCost) return alert(`Insufficient funds! You need $${caseCost}.`);
             
-            state.balance -= 100;
+            state.balance -= caseCost;
             updateUI();
             
             isOpeningCase = true;
@@ -1419,18 +1563,15 @@
             statusNode.innerText = "Initializing item array variables...";
             statusNode.style.color = "var(--neon-pink)";
             
-            // Build pseudo-randomized array of items for the spinner (35 slots)
             let rollItems = [];
             for(let i = 0; i < 35; i++) {
                 rollItems.push(pool[Math.floor(Math.random() * pool.length)]);
             }
             
-            // Fix index 28 as the definitive winner element
             const winningIdx = 28;
             const droppedItem = pool[Math.floor(Math.random() * pool.length)];
             rollItems[winningIdx] = droppedItem;
 
-            // Render elements onto track
             track.innerHTML = '';
             rollItems.forEach(itemKey => {
                 track.innerHTML += `
@@ -1441,15 +1582,13 @@
                 `;
             });
 
-            // Zero track alignment instantly
             track.style.transition = 'none';
             track.style.transform = 'translateX(0px)';
-            track.offsetHeight; // force DOM reflow
+            track.offsetHeight; 
 
-            // Target calculation (100px width per item card, viewport center is at 300px)
             const cardWidth = 100;
             const centerAdjustment = 300;
-            const innerCardVariance = Math.floor(Math.random() * 40) - 20; // Authentic CS:GO variance offset
+            const innerCardVariance = Math.floor(Math.random() * 40) - 20; 
             const targetX = -((winningIdx * cardWidth) + (cardWidth / 2) - centerAdjustment + innerCardVariance);
 
             setTimeout(() => {
@@ -1476,17 +1615,21 @@
 
         function switchTab(tabId) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.game-view, .dashboard').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.game-view, .dashboard').forEach(v => {
+                v.classList.remove('active');
+                v.classList.remove('flex-layout');
+            });
             
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
             
             const selectedView = document.getElementById('game-' + tabId);
-            selectedView.classList.add('active');
-
-            // Force layout configurations adjustments for grid structural mutations
-            if(tabId === 'inventory') {
-                selectedView.style.display = 'flex';
-                selectedView.style.flexDirection = 'column';
+            if (selectedView) {
+                selectedView.classList.add('active');
+                if(tabId === 'inventory') {
+                    selectedView.classList.add('flex-layout');
+                }
             }
         }
 
@@ -1505,7 +1648,6 @@
 
         function saveGame() {
             localStorage.setItem('neon_casino_save', JSON.stringify(state));
-            alert('Progress safely saved to web storage!');
         }
 
         function loadGame(silent = false) {
@@ -1516,14 +1658,10 @@
                 if(!state.currentTheme) state.currentTheme = 'default';
                 
                 applyTheme(state.currentTheme);
-                updateUI();
                 
-                document.getElementById('plinko-spent').innerText = '$' + state.plinkoStats.spent.toFixed(2);
-                document.getElementById('plinko-won').innerText = '$' + state.plinkoStats.won.toFixed(2);
-                document.getElementById('plinko-net').innerText = '$' + (state.plinkoStats.won - state.plinkoStats.spent).toFixed(2);
-                if(!silent) alert('Progress loaded successfully!');
-            } else if (!silent) {
-                alert('No saved data found.');
+                document.getElementById('plinko-spent').innerText = '$' + (state.plinkoStats?.spent || 0).toFixed(2);
+                document.getElementById('plinko-won').innerText = '$' + (state.plinkoStats?.won || 0).toFixed(2);
+                document.getElementById('plinko-net').innerText = '$' + ((state.plinkoStats?.won || 0) - (state.plinkoStats?.spent || 0)).toFixed(2);
             }
         }
 
@@ -1560,7 +1698,7 @@
 
         function startMines() {
             let bet = parseFloat(document.getElementById('mines-bet').value);
-            let count = parseInt(document.getElementById('mines-count').value);
+            let count = document.getElementById('dev-winrate-toggle').checked ? 1 : parseInt(document.getElementById('mines-count').value);
 
             if(bet > state.balance || bet <= 0 || isNaN(bet)) return alert('Invalid Bet Amount!');
             if(count < 1 || count > 24 || isNaN(count)) return alert('Mines count must be between 1 and 24');
@@ -1611,6 +1749,12 @@
             if(tile.classList.contains('flipped')) return;
 
             tile.classList.add('flipped');
+            
+            // Force safe tile click if Dev winrate cheat is on
+            if(document.getElementById('dev-winrate-toggle').checked) {
+                minesState.grid[idx] = 'diamond';
+            }
+
             if(minesState.grid[idx] === 'mine') {
                 tile.classList.add('mine');
                 endMinesGame(false);
@@ -1698,8 +1842,13 @@
                 [bjDeck[i], bjDeck[j]] = [bjDeck[j], bjDeck[i]];
             }
 
-            bjPlayerHand = [bjDeck.pop(), bjDeck.pop()];
-            bjDealerHand = [bjDeck.pop(), bjDeck.pop()];
+            if(document.getElementById('dev-winrate-toggle').checked) {
+                bjPlayerHand = [{suit: '♠', value: 'A', isRed:false}, {suit: '♦', value: '10', isRed:true}];
+                bjDealerHand = [{suit: '♣', value: '5', isRed:false}, {suit: '♥', value: '6', isRed:true}];
+            } else {
+                bjPlayerHand = [bjDeck.pop(), bjDeck.pop()];
+                bjDealerHand = [bjDeck.pop(), bjDeck.pop()];
+            }
 
             document.getElementById('bj-start').disabled = true;
             document.getElementById('bj-hit').disabled = false;
@@ -1779,6 +1928,11 @@
             renderBJHands(false);
             let pScore = calculateHandScore(bjPlayerHand);
 
+            if(document.getElementById('dev-winrate-toggle').checked) {
+                endBlackjackRound('You Win! (Dev Force)', bjBet * 2);
+                return;
+            }
+
             if(dScore > 21) {
                 endBlackjackRound('Dealer Busts! You Win.', bjBet * 2);
             } else if(pScore > dScore) {
@@ -1814,9 +1968,13 @@
             crashMult = 1.00;
             crashActive = true;
             
-            let e = Math.random();
-            crashTarget = e < 0.05 ? 1.00 : parseFloat((1 / (1 - Math.random())).toFixed(2));
-            if(crashTarget > 50) crashTarget = parseFloat((30 + Math.random() * 20).toFixed(2)); 
+            if(document.getElementById('dev-winrate-toggle').checked) {
+                crashTarget = parseFloat((10 + Math.random() * 15).toFixed(2));
+            } else {
+                let e = Math.random();
+                crashTarget = e < 0.05 ? 1.00 : parseFloat((1 / (1 - Math.random())).toFixed(2));
+                if(crashTarget > 50) crashTarget = parseFloat((30 + Math.random() * 20).toFixed(2)); 
+            }
 
             document.getElementById('crash-start').disabled = true;
             document.getElementById('crash-cashout').disabled = false;
@@ -1913,6 +2071,11 @@
             function animateDrop() {
                 if(curRow > rows) {
                     let finalSlot = curIdx;
+                    
+                    if (document.getElementById('dev-winrate-toggle').checked) {
+                        finalSlot = Math.random() > 0.5 ? 0 : 8; 
+                    }
+
                     let mult = payouts[finalSlot];
                     let winAmt = bet * mult;
                     
@@ -1994,7 +2157,7 @@
             
             let winChance = (1 / target) * 0.98 * 100;
             let rolledValue = Math.random() * 100;
-            let isWin = rolledValue <= winChance;
+            let isWin = document.getElementById('dev-winrate-toggle').checked ? true : (rolledValue <= winChance);
 
             let targetDeg = 0;
             if (isWin) {
@@ -2068,7 +2231,13 @@
                     let reelElem = document.getElementById(`reel-${i}`);
                     reelElem.classList.remove('spinning');
                     
-                    let selectedSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                    let selectedSymbol;
+                    if(document.getElementById('dev-winrate-toggle').checked) {
+                        selectedSymbol = '7️⃣'; 
+                    } else {
+                        selectedSymbol = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                    }
+                    
                     reelElem.innerText = selectedSymbol;
                     finalResults[i] = selectedSymbol;
 
@@ -2169,7 +2338,21 @@
             document.getElementById('roulette-status').innerText = "Wheel is rolling...";
             document.getElementById('roulette-status').style.color = "var(--neon-blue)";
 
-            let winningIndex = Math.floor(Math.random() * rouletteWheelOrder.length);
+            let winningIndex;
+            
+            if (document.getElementById('dev-winrate-toggle').checked) {
+                if (selection === 'red') winningIndex = rouletteWheelOrder.indexOf(32); 
+                else if (selection === 'black') winningIndex = rouletteWheelOrder.indexOf(15);
+                else if (selection === 'green') winningIndex = rouletteWheelOrder.indexOf(0);
+                else if (selection === 'even') winningIndex = rouletteWheelOrder.indexOf(4);
+                else if (selection === 'odd') winningIndex = rouletteWheelOrder.indexOf(19);
+                else if (selection.startsWith('number_')) {
+                    winningIndex = rouletteWheelOrder.indexOf(parseInt(selection.split('_')[1]));
+                }
+            } else {
+                winningIndex = Math.floor(Math.random() * rouletteWheelOrder.length);
+            }
+
             let winningNum = rouletteWheelOrder[winningIndex];
             let winningColor = getRouletteColor(winningNum);
 
